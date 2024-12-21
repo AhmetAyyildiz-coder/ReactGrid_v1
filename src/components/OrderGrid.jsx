@@ -213,23 +213,25 @@ const OrderGrid = () => {
     }, [selectedValues, orders, searchValues, dateFilters, sortConfig, groupBy]);
 
     const handleExportExcel = () => {
-        // Görüntülenen tarihleri formatlayarak veriyi hazırla
-        const exportData = filteredOrders.map(order => ({
-            'Sipariş No': order.orderId,
-            'Müşteri ID': order.customerId,
-            'Müşteri Adı': order.customerName,
-            'Personel ID': order.employeeId,
-            'Personel Adı': order.employeeName,
-            'Sipariş Tarihi': dayjs(order.orderDate).format('DD.MM.YYYY'),
-            'Talep Tarihi': dayjs(order.requiredDate).format('DD.MM.YYYY'),
-            'Sevk Tarihi': order.shippedDate ? dayjs(order.shippedDate).format('DD.MM.YYYY') : '',
-            'Sevk Adı': order.shipName,
-            'Sevk Adresi': order.shipAddress,
-            'Sevk Şehri': order.shipCity,
-            'Sevk Bölgesi': order.shipRegion || '',
-            'Posta Kodu': order.shipPostalCode,
-            'Sevk Ülkesi': order.shipCountry
-        }));
+        // Sadece görünür kolonları kullan
+        const visibleColumnDefs = columns.filter(col => visibleColumns.includes(col.id));
+        
+        // Görünür kolonlara göre veriyi hazırla
+        const exportData = filteredOrders.map(order => {
+            const rowData = {};
+            visibleColumnDefs.forEach(column => {
+                let value = order[column.id];
+                
+                // Tarih kolonları için format uygula
+                if (['orderDate', 'requiredDate', 'shippedDate'].includes(column.id)) {
+                    value = value ? dayjs(value).format('DD.MM.YYYY') : '';
+                }
+                
+                // Kolon başlığını Türkçe olarak kullan
+                rowData[column.label] = value || '';
+            });
+            return rowData;
+        });
 
         // Excel Workbook oluştur
         const wb = XLSX.utils.book_new();
