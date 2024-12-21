@@ -41,7 +41,8 @@ const CustomerOrdersGrid = () => {
         { id: 'shippedDate', label: 'Sevk Tarihi', type: 'date' },
         { id: 'shipAddress', label: 'Sevk Adresi' },
         { id: 'shipCity', label: 'Sevk Şehri' },
-        { id: 'shipCountry', label: 'Sevk Ülkesi' }
+        { id: 'shipCountry', label: 'Sevk Ülkesi' },
+        { id: 'sumQuantity', label: 'Toplam Miktar', type: 'number' }
     ];
 
     const [customers, setCustomers] = useState([]);
@@ -80,6 +81,15 @@ const CustomerOrdersGrid = () => {
             }), {})
     );
 
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+
+    const [selectedCustomers, setSelectedCustomers] = useState([]);
+    const [detailSortConfigs, setDetailSortConfigs] = useState({});
+
+    const [detailSearchValues, setDetailSearchValues] = useState({});
+
+    const [detailDateFilters, setDetailDateFilters] = useState({});
+
     const handleDateFilterChange = (columnId, type, value) => {
         setDateFilters(prev => ({
             ...prev,
@@ -88,6 +98,14 @@ const CustomerOrdersGrid = () => {
                 [type]: value
             }
         }));
+    };
+
+    const handleSort = (columnId) => {
+        let direction = 'asc';
+        if (sortConfig.key === columnId && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key: columnId, direction });
     };
 
     useEffect(() => {
@@ -135,7 +153,8 @@ const CustomerOrdersGrid = () => {
                         shipCity: safeOrder.shipCity || '',
                         shipRegion: safeOrder.shipRegion || '',
                         shipPostalCode: safeOrder.shipPostalCode || '',
-                        shipCountry: safeOrder.shipCountry || ''
+                        shipCountry: safeOrder.shipCountry || '',
+                        sumQuantity: safeOrder.sumQuantity || 0
                     };
                 })
             }));
@@ -171,8 +190,8 @@ const CustomerOrdersGrid = () => {
     };
 
     useEffect(() => {
-        const filterData = () => {
-            const filtered = customers.filter(customer => {
+        const filterAndSortData = () => {
+            let filtered = customers.filter(customer => {
                 const cityFilter = selectedValues.city.length === 0 ||
                     selectedValues.city.includes(customer.city);
 
@@ -185,12 +204,58 @@ const CustomerOrdersGrid = () => {
                 return cityFilter && searchFilters;
             });
 
+            if (sortConfig.key) {
+                filtered.sort((a, b) => {
+                    const aValue = a[sortConfig.key] || '';
+                    const bValue = b[sortConfig.key] || '';
+                    
+                    if (aValue < bValue) {
+                        return sortConfig.direction === 'asc' ? -1 : 1;
+                    }
+                    if (aValue > bValue) {
+                        return sortConfig.direction === 'asc' ? 1 : -1;
+                    }
+                    return 0;
+                });
+            }
+
             setFilteredCustomers(filtered);
             setPage(0);
         };
 
-        filterData();
-    }, [selectedValues, customers, searchValues]);
+        filterAndSortData();
+    }, [selectedValues, customers, searchValues, sortConfig]);
+
+    const handleSelectAllClick = (event) => {
+        if (event.target.checked) {
+            const newSelected = filteredCustomers.map(customer => customer.customerId);
+            setSelectedCustomers(newSelected);
+            return;
+        }
+        setSelectedCustomers([]);
+    };
+
+    const handleCustomerClick = (event, customerId) => {
+        const selectedIndex = selectedCustomers.indexOf(customerId);
+        let newSelected = [];
+
+        if (selectedIndex === -1) {
+            newSelected = newSelected.concat(selectedCustomers, customerId);
+        } else if (selectedIndex === 0) {
+            newSelected = newSelected.concat(selectedCustomers.slice(1));
+        } else if (selectedIndex === selectedCustomers.length - 1) {
+            newSelected = newSelected.concat(selectedCustomers.slice(0, -1));
+        } else if (selectedIndex > 0) {
+            newSelected = newSelected.concat(
+                selectedCustomers.slice(0, selectedIndex),
+                selectedCustomers.slice(selectedIndex + 1),
+            );
+        }
+
+        setSelectedCustomers(newSelected);
+    };
+
+    const isCustomerSelected = (customerId) => selectedCustomers.indexOf(customerId) !== -1;
 
     const renderCustomerRow = (customer) => {
         const isExpanded = expandedCustomer === customer.customerId;
@@ -206,6 +271,102 @@ const CustomerOrdersGrid = () => {
         };
 
         const customerSelectedRows = selectedOrderRows[customer.customerId] || [];
+        const detailSortConfig = detailSortConfigs[customer.customerId] || { key: null, direction: null };
+
+        const handleDetailSort = (columnId) => {
+            let direction = 'asc';
+            if (detailSortConfig.key === columnId && detailSortConfig.direction === 'asc') {
+                direction = 'desc';
+            }
+            setDetailSortConfigs(prev => ({
+                ...prev,
+                [customer.customerId]: { key: columnId, direction }
+            }));
+        };
+
+        const customerSearchValues = detailSearchValues[customer.customerId] || {};
+
+        const handleDetailSearchChange = (columnId, value) => {
+            setDetailSearchValues(prev => ({
+                ...prev,
+                [customer.customerId]: {
+                    ...prev[customer.customerId],
+                    [columnId]: value
+                }
+            }));
+        };
+
+        const customerDateFilters = detailDateFilters[customer.customerId] || 
+            orderColumns
+                .filter(col => col.type === 'date')
+                .reduce((acc, col) => ({
+                    ...acc,
+                    [col.id]: { start: null, end: null }
+                }), {});
+
+        const handleDetailDateFilterChange = (columnId, type, value) => {
+            setDetailDateFilters(prev => ({
+                ...prev,
+                [customer.customerId]: {
+                    ...prev[customer.customerId],
+                    [columnId]: {
+                        ...(prev[customer.customerId]?.[columnId] || {}),
+                        [type]: value
+                    }
+                }
+            }));
+        };
+
+        const filteredOrders = orders.filter(order => {
+            const searchFilter = orderColumns.every(column => {
+                const searchValue = customerSearchValues[column.id]?.toLowerCase() || '';
+                if (!searchValue) return true;
+                
+                const orderValue = order[column.id]?.toString().toLowerCase() || '';
+                return orderValue.includes(searchValue);
+            });
+
+            const dateFilter = orderColumns
+                .filter(col => col.type === 'date')
+                .every(column => {
+                    const filter = customerDateFilters[column.id];
+                    if (!filter?.start && !filter?.end) return true;
+
+                    const orderDate = order[column.id] ? dayjs(order[column.id], 'DD.MM.YYYY') : null;
+                    if (!orderDate) return false;
+
+                    const startDate = filter.start ? dayjs(filter.start).startOf('day') : null;
+                    const endDate = filter.end ? dayjs(filter.end).endOf('day') : null;
+
+                    if (startDate && endDate) {
+                        return orderDate.isBetween(startDate, endDate, 'day', '[]');
+                    } else if (startDate) {
+                        return orderDate.isSameOrAfter(startDate, 'day');
+                    } else if (endDate) {
+                        return orderDate.isSameOrBefore(endDate, 'day');
+                    }
+
+                    return true;
+                });
+
+            return searchFilter && dateFilter;
+        });
+
+        const sortedOrders = [...filteredOrders];
+        if (detailSortConfig.key) {
+            sortedOrders.sort((a, b) => {
+                const aValue = a[detailSortConfig.key] || '';
+                const bValue = b[detailSortConfig.key] || '';
+                
+                if (aValue < bValue) {
+                    return detailSortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return detailSortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
 
         const isSelected = (orderId) => customerSelectedRows.indexOf(orderId) !== -1;
 
@@ -263,26 +424,70 @@ const CustomerOrdersGrid = () => {
                                 {loading ? (
                                     <Typography sx={{ p: 2 }}>Yükleniyor...</Typography>
                                 ) : orders.length > 0 ? (
-                                    <TableContainer>
-                                        <Table size="small">
-                                            <TableHeader
-                                                columns={orderColumns}
-                                                searchValues={{}}
-                                                onSearchChange={() => {}}
-                                                sortConfig={{ key: null, direction: null }}
-                                                onSort={() => {}}
-                                                dateFilters={dateFilters}
-                                                onDateFilterChange={handleDateFilterChange}
-                                            />
-                                            <TableBodyComponent
-                                                columns={orderColumns}
-                                                data={orders}
-                                                selectedRows={customerSelectedRows}
-                                                onRowClick={handleOrderRowClick}
-                                                isSelected={isSelected}
-                                            />
-                                        </Table>
-                                    </TableContainer>
+                                    <>
+                                        <TableContainer>
+                                            <Table size="small">
+                                                <TableHeader
+                                                    columns={orderColumns}
+                                                    searchValues={customerSearchValues}
+                                                    onSearchChange={handleDetailSearchChange}
+                                                    sortConfig={detailSortConfig}
+                                                    onSort={handleDetailSort}
+                                                    dateFilters={customerDateFilters}
+                                                    onDateFilterChange={handleDetailDateFilterChange}
+                                                    numSelected={customerSelectedRows.length}
+                                                    rowCount={sortedOrders.length}
+                                                    onSelectAllClick={(event) => {
+                                                        if (event.target.checked) {
+                                                            setSelectedOrderRows(prev => ({
+                                                                ...prev,
+                                                                [customer.customerId]: sortedOrders.map(order => order.orderId)
+                                                            }));
+                                                        } else {
+                                                            setSelectedOrderRows(prev => ({
+                                                                ...prev,
+                                                                [customer.customerId]: []
+                                                            }));
+                                                        }
+                                                    }}
+                                                />
+                                                <TableBodyComponent
+                                                    columns={orderColumns}
+                                                    data={sortedOrders}
+                                                    selectedRows={customerSelectedRows}
+                                                    onRowClick={handleOrderRowClick}
+                                                    isSelected={isSelected}
+                                                />
+                                            </Table>
+                                        </TableContainer>
+                                        <Box sx={{ 
+                                            mt: 2, 
+                                            p: 2, 
+                                            bgcolor: 'rgba(0, 0, 0, 0.03)',
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
+                                            <Typography variant="subtitle2">
+                                                Toplam Kayıt: {sortedOrders.length}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', gap: 4 }}>
+                                                <Typography variant="subtitle2">
+                                                    Toplam Miktar: {sortedOrders.reduce((sum, order) => sum + (order.sumQuantity || 0), 0)}
+                                                </Typography>
+                                                <Typography variant="subtitle2">
+                                                    Ortalama Miktar: {(sortedOrders.reduce((sum, order) => sum + (order.sumQuantity || 0), 0) / sortedOrders.length).toFixed(2)}
+                                                </Typography>
+                                                <Typography variant="subtitle2">
+                                                    Max Miktar: {Math.max(...sortedOrders.map(order => order.sumQuantity || 0))}
+                                                </Typography>
+                                                <Typography variant="subtitle2">
+                                                    Min Miktar: {Math.min(...sortedOrders.map(order => order.sumQuantity || 0))}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </>
                                 ) : (
                                     <Typography sx={{ p: 2 }}>Sipariş bulunamadı</Typography>
                                 )}
@@ -335,8 +540,13 @@ const CustomerOrdersGrid = () => {
                                 searchValues={searchValues}
                                 onSearchChange={handleSearchChange}
                                 selectedValues={selectedValues}
-                                sortConfig={{ key: null, direction: null }}
-                                onSort={() => {}}
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
+                                dateFilters={dateFilters}
+                                onDateFilterChange={handleDateFilterChange}
+                                numSelected={selectedCustomers.length}
+                                rowCount={filteredCustomers.length}
+                                onSelectAllClick={handleSelectAllClick}
                             />
                             <tbody>
                                 {filteredCustomers
