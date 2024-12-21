@@ -1,11 +1,22 @@
 import React from 'react';
-import { TableHead, TableRow, TableCell, Box, Typography, IconButton } from '@mui/material';
+import { TableHead, TableRow, TableCell, Box, Typography, IconButton, Checkbox } from '@mui/material';
 import { ChevronDown } from 'lucide-react';
 
-const TableHeader = ({ columns, selectedValues, handleFilterClick }) => {
+const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, rowCount, onSelectAllClick }) => {
+    const isAllSelected = rowCount > 0 && numSelected === rowCount;
+    const isIndeterminate = numSelected > 0 && numSelected < rowCount;
+
     return (
         <TableHead>
             <TableRow>
+                <TableCell padding="checkbox">
+                    <Checkbox
+                        indeterminate={isIndeterminate}
+                        checked={isAllSelected}
+                        onChange={(e) => onSelectAllClick(e.target.checked)}
+                        inputProps={{ 'aria-label': 'Tümünü seç' }}
+                    />
+                </TableCell>
                 {columns.map((column) => (
                     <TableCell
                         key={column.id}

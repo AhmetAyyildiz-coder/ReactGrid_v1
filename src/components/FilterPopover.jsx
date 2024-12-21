@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Popover,
     TextField,
@@ -29,6 +29,9 @@ const FilterPopover = ({
         option.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const isAllSelected = filteredOptions.length > 0 && localSelected.length === filteredOptions.length;
+    const isIndeterminate = localSelected.length > 0 && localSelected.length < filteredOptions.length;
+
     const handleToggle = (value) => {
         const currentIndex = localSelected.indexOf(value);
         const newChecked = [...localSelected];
@@ -42,10 +45,26 @@ const FilterPopover = ({
         setLocalSelected(newChecked);
     };
 
+    const handleSelectAll = () => {
+        if (isAllSelected) {
+            setLocalSelected([]);
+        } else {
+            const allOptions = filteredOptions;
+            setLocalSelected(allOptions);
+        }
+    };
+
     const handleApply = () => {
         onSelectionChange(localSelected);
         onClose();
     };
+
+    // Eğer arama sonucu tüm seçenekler seçilmişse, "Tümünü Seç" checkbox'ı da seçilmiş sayılır
+    useEffect(() => {
+        if (localSelected.length > filteredOptions.length) {
+            setLocalSelected(filteredOptions);
+        }
+    }, [filteredOptions, localSelected.length]);
 
     return (
         <Popover
@@ -81,6 +100,22 @@ const FilterPopover = ({
                     sx={{ mb: 1 }}
                 />
                 <List sx={{ maxHeight: 250, overflow: 'auto' }}>
+                    <ListItem
+                        dense
+                        sx={{ cursor: 'pointer' }}
+                        onClick={handleSelectAll}
+                    >
+                        <ListItemIcon>
+                            <Checkbox
+                                edge="start"
+                                indeterminate={isIndeterminate}
+                                checked={isAllSelected}
+                                tabIndex={-1}
+                                disableRipple
+                            />
+                        </ListItemIcon>
+                        <ListItemText primary="Tümünü Seç" />
+                    </ListItem>
                     {filteredOptions.map((option) => (
                         <ListItem
                             key={option}

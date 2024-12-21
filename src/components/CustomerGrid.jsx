@@ -32,6 +32,8 @@ const CustomerGrid = () => {
         country: [],
     });
 
+    const [selectedRows, setSelectedRows] = useState([]);
+
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
@@ -115,6 +117,37 @@ const CustomerGrid = () => {
         }));
     };
 
+    const handleSelectAllClick = (isChecked) => {
+        if (isChecked) {
+            const newSelecteds = filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((n) => n.customerId);
+            setSelectedRows(newSelecteds);
+            return;
+        }
+        setSelectedRows([]);
+    };
+
+    const handleRowClick = (customerId) => {
+        const selectedIndex = selectedRows.indexOf(customerId);
+        let newSelected = [];
+
+        if (selectedIndex === -1) {
+            newSelected = newSelected.concat(selectedRows, customerId);
+        } else if (selectedIndex === 0) {
+            newSelected = newSelected.concat(selectedRows.slice(1));
+        } else if (selectedIndex === selectedRows.length - 1) {
+            newSelected = newSelected.concat(selectedRows.slice(0, -1));
+        } else if (selectedIndex > 0) {
+            newSelected = newSelected.concat(
+                selectedRows.slice(0, selectedIndex),
+                selectedRows.slice(selectedIndex + 1)
+            );
+        }
+
+        setSelectedRows(newSelected);
+    };
+
+    const isSelected = (customerId) => selectedRows.indexOf(customerId) !== -1;
+
     const columns = [
         { id: 'customerId', label: 'Müşteri ID' },
         { id: 'companyName', label: 'Şirket Adı' },
@@ -137,11 +170,18 @@ const CustomerGrid = () => {
 
     return (
         <div className="w-full p-4">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" component="h2">
                     Müşteri Listesi
                 </Typography>
-                <ExportButton onExport={handleExportExcel} />
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {selectedRows.length > 0 && (
+                        <Typography variant="subtitle1" sx={{ mr: 2 }}>
+                            {selectedRows.length} kayıt seçildi
+                        </Typography>
+                    )}
+                    <ExportButton onExport={handleExportExcel} />
+                </Box>
             </Box>
             <Paper className="w-full mb-4">
                 <TableContainer className="max-h-screen">
@@ -150,10 +190,16 @@ const CustomerGrid = () => {
                             columns={columns}
                             selectedValues={selectedValues}
                             handleFilterClick={handleFilterClick}
+                            numSelected={selectedRows.length}
+                            rowCount={filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).length}
+                            onSelectAllClick={handleSelectAllClick}
                         />
                         <TableBodyComponent
                             columns={columns}
                             data={filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
+                            selectedRows={selectedRows}
+                            onRowClick={handleRowClick}
+                            isSelected={isSelected}
                         />
                     </Table>
                 </TableContainer>
