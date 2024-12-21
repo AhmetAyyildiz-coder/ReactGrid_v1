@@ -34,6 +34,17 @@ const CustomerGrid = () => {
 
     const [selectedRows, setSelectedRows] = useState([]);
 
+    const [searchValues, setSearchValues] = useState({
+        customerId: '',
+        companyName: '',
+        contactName: '',
+        contactTitle: '',
+        address: '',
+        city: '',
+        country: '',
+        phone: ''
+    });
+
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
@@ -63,7 +74,13 @@ const CustomerGrid = () => {
                 const countryFilter = selectedValues.country.length === 0 ||
                     selectedValues.country.includes(customer.country);
 
-                return cityFilter && countryFilter;
+                const searchFilters = Object.keys(searchValues).every(key => {
+                    if (!searchValues[key]) return true;
+                    const customerValue = customer[key]?.toString().toLowerCase() || '';
+                    return customerValue.includes(searchValues[key].toLowerCase());
+                });
+
+                return cityFilter && countryFilter && searchFilters;
             });
 
             setFilteredCustomers(filtered);
@@ -71,7 +88,7 @@ const CustomerGrid = () => {
         };
 
         filterData();
-    }, [selectedValues, customers]);
+    }, [selectedValues, customers, searchValues]);
 
     const handleExportExcel = () => {
         const csvContent = [
@@ -168,6 +185,13 @@ const CustomerGrid = () => {
         setPage(0);
     };
 
+    const handleSearchChange = (columnId, value) => {
+        setSearchValues(prev => ({
+            ...prev,
+            [columnId]: value
+        }));
+    };
+
     return (
         <div className="w-full p-4">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -193,6 +217,8 @@ const CustomerGrid = () => {
                             numSelected={selectedRows.length}
                             rowCount={filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).length}
                             onSelectAllClick={handleSelectAllClick}
+                            searchValues={searchValues}
+                            onSearchChange={handleSearchChange}
                         />
                         <TableBodyComponent
                             columns={columns}

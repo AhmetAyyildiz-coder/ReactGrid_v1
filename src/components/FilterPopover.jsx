@@ -95,7 +95,8 @@ const FilterPopover = ({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{
-                        startAdornment: <Search className="w-4 h-4 mr-2 text-gray-400" />
+                        startAdornment: <Search className="w-4 h-4 mr-2 text-gray-400" />,
+                        sx: { height: '55px' }
                     }}
                     sx={{ mb: 1 }}
                 />
