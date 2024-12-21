@@ -14,8 +14,20 @@ import TableBodyComponent from './TableBodyComponent.jsx';
 import PaginationComponent from './PaginationComponent.jsx';
 import ExportButton from './ExportButton.jsx';
 import ActiveFilters from './ActiveFilters';
+import ColumnChooser from './ColumnChooser';
 
 const CustomerGrid = () => {
+    const columns = [
+        { id: 'customerId', label: 'Müşteri ID' },
+        { id: 'companyName', label: 'Şirket Adı' },
+        { id: 'contactName', label: 'İletişim Adı' },
+        { id: 'contactTitle', label: 'İletişim Ünvanı' },
+        { id: 'address', label: 'Adres' },
+        { id: 'city', label: 'Şehir', filterable: true },
+        { id: 'country', label: 'Ülke', filterable: true },
+        { id: 'phone', label: 'Telefon' }
+    ];
+
     const [customers, setCustomers] = useState([]);
     const [filteredCustomers, setFilteredCustomers] = useState([]);
     const [page, setPage] = useState(0);
@@ -45,6 +57,15 @@ const CustomerGrid = () => {
         country: '',
         phone: ''
     });
+
+    const [visibleColumns, setVisibleColumns] = useState(() => {
+        const saved = localStorage.getItem('visibleColumns');
+        return saved ? JSON.parse(saved) : columns.map(col => col.id);
+    });
+
+    useEffect(() => {
+        localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+    }, [visibleColumns]);
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -166,17 +187,6 @@ const CustomerGrid = () => {
 
     const isSelected = (customerId) => selectedRows.indexOf(customerId) !== -1;
 
-    const columns = [
-        { id: 'customerId', label: 'Müşteri ID' },
-        { id: 'companyName', label: 'Şirket Adı' },
-        { id: 'contactName', label: 'İletişim Adı' },
-        { id: 'contactTitle', label: 'İletişim Ünvanı' },
-        { id: 'address', label: 'Adres' },
-        { id: 'city', label: 'Şehir', filterable: true },
-        { id: 'country', label: 'Ülke', filterable: true },
-        { id: 'phone', label: 'Telefon' }
-    ];
-
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
     };
@@ -207,6 +217,31 @@ const CustomerGrid = () => {
         }));
     };
 
+    const handleColumnToggle = (columnId, isSelectAll = false) => {
+        if (isSelectAll) {
+            // Tümünü seç/kaldır işlemi
+            if (Array.isArray(columnId)) {
+                setVisibleColumns(columnId);
+            } else {
+                setVisibleColumns([columnId]); // Sadece bir kolon bırak
+            }
+            return;
+        }
+
+        // Tekli kolon seçimi
+        setVisibleColumns(prev => {
+            if (prev.includes(columnId)) {
+                if (prev.length === 1) return prev;
+                return prev.filter(id => id !== columnId);
+            }
+            return [...prev, columnId];
+        });
+    };
+
+    const filteredColumns = columns.filter(col => 
+        visibleColumns.includes(col.id)
+    );
+
     return (
         <div className="w-full p-4">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -220,13 +255,18 @@ const CustomerGrid = () => {
                         </Typography>
                     )}
                     <ExportButton onExport={handleExportExcel} />
+                    <ColumnChooser
+                        columns={columns}
+                        visibleColumns={visibleColumns}
+                        onColumnToggle={handleColumnToggle}
+                    />
                 </Box>
             </Box>
             <Paper className="w-full mb-4">
                 <TableContainer className="max-h-screen">
                     <Table stickyHeader>
                         <TableHeader
-                            columns={columns}
+                            columns={filteredColumns}
                             selectedValues={selectedValues}
                             handleFilterClick={handleFilterClick}
                             numSelected={selectedRows.length}
@@ -236,7 +276,7 @@ const CustomerGrid = () => {
                             onSearchChange={handleSearchChange}
                         />
                         <TableBodyComponent
-                            columns={columns}
+                            columns={filteredColumns}
                             data={filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)}
                             selectedRows={selectedRows}
                             onRowClick={handleRowClick}
