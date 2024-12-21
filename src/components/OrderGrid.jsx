@@ -21,6 +21,7 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr'; // Türkçe tarih formatı için
 import * as XLSX from 'xlsx';
+import GroupingControl from './GroupingControl';
 
 // Plugin'leri dayjs'ye ekleyelim
 dayjs.extend(isSameOrAfter);
@@ -83,6 +84,10 @@ const OrderGrid = () => {
         key: 'orderId',
         direction: 'asc'
     });
+
+    const [groupBy, setGroupBy] = useState(null);
+    const [groupedData, setGroupedData] = useState(null);
+    const [expandedGroups, setExpandedGroups] = useState([]);
 
     useEffect(() => {
         localStorage.setItem('orderGridVisibleColumns', JSON.stringify(visibleColumns));
@@ -184,12 +189,28 @@ const OrderGrid = () => {
                 return strB.localeCompare(strA, 'tr');
             });
 
-            setFilteredOrders(sortedData);
+            if (groupBy && sortedData.length > 0) {
+                const groups = {};
+                sortedData.forEach(item => {
+                    const groupValue = item[groupBy] || 'Belirtilmemiş';
+                    if (!groups[groupValue]) {
+                        groups[groupValue] = [];
+                    }
+                    groups[groupValue].push(item);
+                });
+
+                setGroupedData(groups);
+                setFilteredOrders(sortedData);
+            } else {
+                setGroupedData(null);
+                setFilteredOrders(sortedData);
+            }
+
             setPage(0);
         };
 
         filterData();
-    }, [selectedValues, orders, searchValues, dateFilters, sortConfig]);
+    }, [selectedValues, orders, searchValues, dateFilters, sortConfig, groupBy]);
 
     const handleExportExcel = () => {
         // Görüntülenen tarihleri formatlayarak veriyi hazırla
@@ -382,6 +403,55 @@ const OrderGrid = () => {
         }));
     };
 
+    // Gruplama fonksiyonları
+    const handleGroupByChange = (columnId) => {
+        setGroupBy(columnId);
+        if (!columnId) {
+            setGroupedData(null);
+            setExpandedGroups([]);
+        }
+    };
+
+    const handleClearGrouping = () => {
+        setGroupBy(null);
+        setGroupedData(null);
+        setExpandedGroups([]);
+    };
+
+    const handleToggleGroup = (groupValue) => {
+        setExpandedGroups(prev => {
+            if (prev.includes(groupValue)) {
+                return prev.filter(v => v !== groupValue);
+            }
+            return [...prev, groupValue];
+        });
+    };
+
+    // TableBodyComponent'e geçirilecek veriyi hazırlayalım
+    const getDisplayData = () => {
+        if (!groupedData) {
+            return filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+        }
+
+        const displayData = [];
+        Object.entries(groupedData).forEach(([groupValue, items]) => {
+            // Grup başlığı satırı
+            displayData.push({
+                isGroupHeader: true,
+                groupValue,
+                count: items.length,
+                isExpanded: expandedGroups.includes(groupValue)
+            });
+
+            // Grup açıksa içindeki satırları ekle
+            if (expandedGroups.includes(groupValue)) {
+                displayData.push(...items);
+            }
+        });
+
+        return displayData;
+    };
+
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
             <Box sx={{ 
@@ -414,6 +484,12 @@ const OrderGrid = () => {
                         />
                     </Box>
                 </Box>
+                <GroupingControl
+                    columns={columns}
+                    groupBy={groupBy}
+                    onGroupByChange={handleGroupByChange}
+                    onClearGrouping={handleClearGrouping}
+                />
                 <Paper sx={{ 
                     width: '100%',
                     borderRadius: 0,
@@ -450,17 +526,13 @@ const OrderGrid = () => {
                             />
                             <TableBodyComponent
                                 columns={filteredColumns}
-                                data={filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(order => ({
-                                    ...order,
-                                    // Görüntüleme için tarihleri formatlayalım
-                                    orderDate: dayjs(order.orderDate).format('DD.MM.YYYY'),
-                                    requiredDate: dayjs(order.requiredDate).format('DD.MM.YYYY'),
-                                    shippedDate: order.shippedDate ? dayjs(order.shippedDate).format('DD.MM.YYYY') : null
-                                }))}
+                                data={getDisplayData()}
                                 selectedRows={selectedRows}
                                 onRowClick={handleRowClick}
                                 isSelected={isSelected}
                                 onCellEdit={handleCellEdit}
+                                groupBy={groupBy}
+                                onToggleGroup={handleToggleGroup}
                             />
                         </Table>
                     </TableContainer>
