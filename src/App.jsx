@@ -2,6 +2,10 @@ import { useState } from 'react'
 import './App.css'
 import {createTheme, CssBaseline, ThemeProvider} from "@mui/material";
 import CustomerGrid from "./components/CustomerGrid.jsx";
+import OrderGrid from './components/OrderGrid.jsx';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import 'dayjs/locale/tr';
 
 
 
@@ -16,11 +20,13 @@ function App() {
 
   return (
     <>
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-           <CustomerGrid />
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+              <OrderGrid />
 
-        </ThemeProvider>
+            </ThemeProvider>
+        </LocalizationProvider>
     </>
   )
 }
