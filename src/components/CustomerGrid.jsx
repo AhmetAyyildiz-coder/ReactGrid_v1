@@ -242,6 +242,41 @@ const CustomerGrid = () => {
         visibleColumns.includes(col.id)
     );
 
+    const handleCellEdit = async (customerId, columnId, newValue) => {
+        try {
+            debugger;
+            // API'ye güncelleme isteği gönder
+            const response = await fetch(`https://localhost:7189/api/Customers/${customerId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    [columnId]: newValue
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Güncelleme başarısız oldu');
+            }
+
+            // Başarılı olursa local state'i güncelle
+            setCustomers(prevCustomers => 
+                prevCustomers.map(customer => 
+                    customer.customerId === customerId
+                        ? { ...customer, [columnId]: newValue }
+                        : customer
+                )
+            );
+
+            return true; // Başarılı
+        } catch (error) {
+            console.error('Güncelleme hatası:', error);
+            // Burada bir hata toast/snackbar gösterilebilir
+            return false; // Başarısız
+        }
+    };
+
     return (
         <div className="w-full p-4">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -281,6 +316,7 @@ const CustomerGrid = () => {
                             selectedRows={selectedRows}
                             onRowClick={handleRowClick}
                             isSelected={isSelected}
+                            onCellEdit={handleCellEdit}
                         />
                     </Table>
                 </TableContainer>
