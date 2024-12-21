@@ -13,6 +13,7 @@ import TableHeader from './TableHeader.jsx';
 import TableBodyComponent from './TableBodyComponent.jsx';
 import PaginationComponent from './PaginationComponent.jsx';
 import ExportButton from './ExportButton.jsx';
+import ActiveFilters from './ActiveFilters';
 
 const CustomerGrid = () => {
     const [customers, setCustomers] = useState([]);
@@ -192,6 +193,20 @@ const CustomerGrid = () => {
         }));
     };
 
+    const handleRemoveFilter = (filterType, value) => {
+        setSelectedValues(prev => ({
+            ...prev,
+            [filterType]: prev[filterType].filter(item => item !== value)
+        }));
+    };
+
+    const handleRemoveSearch = (searchKey) => {
+        setSearchValues(prev => ({
+            ...prev,
+            [searchKey]: ''
+        }));
+    };
+
     return (
         <div className="w-full p-4">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -236,6 +251,29 @@ const CustomerGrid = () => {
                     page={page}
                     handleChangePage={handleChangePage}
                     handleChangeRowsPerPage={handleChangeRowsPerPage}
+                />
+                
+                <ActiveFilters
+                    selectedValues={{
+                        'Şehir': selectedValues.city,
+                        'Ülke': selectedValues.country
+                    }}
+                    searchValues={Object.fromEntries(
+                        columns.map(col => [
+                            col.label,
+                            searchValues[col.id]
+                        ]).filter(([_, value]) => value)
+                    )}
+                    onRemoveFilter={(key, value) => {
+                        const mappedKey = key === 'Şehir' ? 'city' : 'country';
+                        handleRemoveFilter(mappedKey, value);
+                    }}
+                    onRemoveSearch={(key) => {
+                        const column = columns.find(col => col.label === key);
+                        if (column) {
+                            handleRemoveSearch(column.id);
+                        }
+                    }}
                 />
             </Paper>
 
