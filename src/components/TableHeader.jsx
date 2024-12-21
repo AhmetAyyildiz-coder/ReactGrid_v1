@@ -1,12 +1,21 @@
 import React from 'react';
-import { TableHead, TableRow, TableCell, Box, Typography, IconButton, Checkbox, TextField } from '@mui/material';
-import { ChevronDown, Search } from 'lucide-react';
+import { TableHead, TableRow, TableCell, Box, IconButton, Checkbox, TextField } from '@mui/material';
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react';
 import { DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 
-const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, rowCount, onSelectAllClick, searchValues, onSearchChange, dateFilters, onDateFilterChange }) => {
+const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, rowCount, onSelectAllClick, searchValues, onSearchChange, dateFilters, onDateFilterChange, sortConfig, onSort }) => {
     const isAllSelected = rowCount > 0 && numSelected === rowCount;
     const isIndeterminate = numSelected > 0 && numSelected < rowCount;
+
+    const getSortIcon = (columnId) => {
+        if (sortConfig.key !== columnId) {
+            return <ChevronsUpDown className="w-4 h-4 text-gray-400" />;
+        }
+        return sortConfig.direction === 'asc' 
+            ? <ChevronUp className="w-4 h-4" /> 
+            : <ChevronDown className="w-4 h-4" />;
+    };
 
     const renderFilterInput = (column) => {
         if (column.id === 'requiredDate') {
@@ -75,13 +84,26 @@ const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, 
                             <Box sx={{ 
                                 display: 'flex', 
                                 alignItems: 'center',
-                                height: '32px'
-                            }}>
+                                height: '32px',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                            }}
+                            onClick={() => onSort(column.id)}
+                            >
                                 {column.label}
+                                <IconButton
+                                    size="small"
+                                    sx={{ ml: 0.5 }}
+                                >
+                                    {getSortIcon(column.id)}
+                                </IconButton>
                                 {column.filterable && (
                                     <IconButton
                                         size="small"
-                                        onClick={(e) => handleFilterClick(e, column.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleFilterClick(e, column.id);
+                                        }}
                                     >
                                         <ChevronDown className="w-4 h-4" />
                                     </IconButton>

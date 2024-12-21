@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr'; // Türkçe tarih formatı için
+import * as XLSX from 'xlsx';
 
 // Plugin'leri dayjs'ye ekleyelim
 dayjs.extend(isSameOrAfter);
@@ -78,6 +79,11 @@ const OrderGrid = () => {
         }
     });
 
+    const [sortConfig, setSortConfig] = useState({
+        key: 'orderId',
+        direction: 'asc'
+    });
+
     useEffect(() => {
         localStorage.setItem('orderGridVisibleColumns', JSON.stringify(visibleColumns));
     }, [visibleColumns]);
@@ -114,7 +120,7 @@ const OrderGrid = () => {
 
     useEffect(() => {
         const filterData = () => {
-            const filtered = orders.filter(order => {
+            let filtered = orders.filter(order => {
                 const cityFilter = selectedValues.shipCity.length === 0 ||
                     selectedValues.shipCity.includes(order.shipCity);
 
@@ -146,31 +152,84 @@ const OrderGrid = () => {
                 return cityFilter && countryFilter && searchFilters && dateFilter;
             });
 
-            setFilteredOrders(filtered);
+            // Sıralama işlemi
+            const sortedData = [...filtered].sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                // Tarih kolonları için özel karşılaştırma
+                if (['orderDate', 'requiredDate', 'shippedDate'].includes(sortConfig.key)) {
+                    const dateA = dayjs(aValue);
+                    const dateB = dayjs(bValue);
+                    if (sortConfig.direction === 'asc') {
+                        return dateA.isBefore(dateB) ? -1 : 1;
+                    }
+                    return dateB.isBefore(dateA) ? -1 : 1;
+                }
+
+                // Sayısal değerler için
+                if (!isNaN(aValue) && !isNaN(bValue)) {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue - bValue 
+                        : bValue - aValue;
+                }
+
+                // Metin değerleri için
+                const strA = String(aValue || '').toLowerCase();
+                const strB = String(bValue || '').toLowerCase();
+                
+                if (sortConfig.direction === 'asc') {
+                    return strA.localeCompare(strB, 'tr');
+                }
+                return strB.localeCompare(strA, 'tr');
+            });
+
+            setFilteredOrders(sortedData);
             setPage(0);
         };
 
         filterData();
-    }, [selectedValues, orders, searchValues, dateFilters]);
+    }, [selectedValues, orders, searchValues, dateFilters, sortConfig]);
 
     const handleExportExcel = () => {
-        const csvContent = [
-            columns.map(col => col.label),
-            ...filteredOrders.map(order => 
-                columns.map(col => order[col.id])
-            )
-        ]
-            .map(row => row.join(','))
-            .join('\n');
+        // Görüntülenen tarihleri formatlayarak veriyi hazırla
+        const exportData = filteredOrders.map(order => ({
+            'Sipariş No': order.orderId,
+            'Müşteri ID': order.customerId,
+            'Müşteri Adı': order.customerName,
+            'Personel ID': order.employeeId,
+            'Personel Adı': order.employeeName,
+            'Sipariş Tarihi': dayjs(order.orderDate).format('DD.MM.YYYY'),
+            'Talep Tarihi': dayjs(order.requiredDate).format('DD.MM.YYYY'),
+            'Sevk Tarihi': order.shippedDate ? dayjs(order.shippedDate).format('DD.MM.YYYY') : '',
+            'Sevk Adı': order.shipName,
+            'Sevk Adresi': order.shipAddress,
+            'Sevk Şehri': order.shipCity,
+            'Sevk Bölgesi': order.shipRegion || '',
+            'Posta Kodu': order.shipPostalCode,
+            'Sevk Ülkesi': order.shipCountry
+        }));
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'Sipariş_Listesi.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Excel Workbook oluştur
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Kolon genişliklerini ayarla
+        const colWidths = Object.keys(exportData[0]).map(key => ({
+            wch: Math.max(
+                key.length,
+                ...exportData.map(row => 
+                    row[key] ? row[key].toString().length : 0
+                )
+            )
+        }));
+        ws['!cols'] = colWidths;
+
+        // Workbook'a worksheet ekle
+        XLSX.utils.book_append_sheet(wb, ws, "Siparişler");
+
+        // Excel dosyasını indir
+        XLSX.writeFile(wb, "Sipariş_Listesi.xlsx");
     };
 
     const handleFilterClick = (event, filterType) => {
@@ -315,10 +374,29 @@ const OrderGrid = () => {
         visibleColumns.includes(col.id)
     );
 
+    // Sıralama fonksiyonu
+    const handleSort = (columnId) => {
+        setSortConfig(prevConfig => ({
+            key: columnId,
+            direction: prevConfig.key === columnId && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
-            <div className="w-full p-4">
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ 
+                width: '100%',
+                margin: 0,
+                padding: 0,
+                overflowX: 'auto'
+            }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 2,
+                    px: 2
+                }}>
                     <Typography variant="h6" component="h2">
                         Sipariş Listesi
                     </Typography>
@@ -328,7 +406,7 @@ const OrderGrid = () => {
                                 {selectedRows.length} kayıt seçildi
                             </Typography>
                         )}
-                        <ExportButton onExport={handleExportExcel} />
+                        <ExportButton onExport={handleExportExcel} text="Excel'e Aktar" />
                         <ColumnChooser
                             columns={columns}
                             visibleColumns={visibleColumns}
@@ -336,9 +414,26 @@ const OrderGrid = () => {
                         />
                     </Box>
                 </Box>
-                <Paper className="w-full mb-4">
-                    <TableContainer className="max-h-screen">
-                        <Table stickyHeader>
+                <Paper sx={{ 
+                    width: '100%',
+                    borderRadius: 0,
+                    overflow: 'hidden'
+                }}>
+                    <TableContainer>
+                        <Table stickyHeader sx={{ 
+                            width: '100%',
+                            tableLayout: 'fixed',
+                            '& .MuiTableCell-root': {
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                minWidth: '150px',
+                                '&:first-of-type': {
+                                    minWidth: '50px',
+                                    width: '50px'
+                                }
+                            }
+                        }}>
                             <TableHeader
                                 columns={filteredColumns}
                                 selectedValues={selectedValues}
@@ -350,6 +445,8 @@ const OrderGrid = () => {
                                 onSearchChange={handleSearchChange}
                                 dateFilters={dateFilters}
                                 onDateFilterChange={handleDateFilterChange}
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
                             />
                             <TableBodyComponent
                                 columns={filteredColumns}
@@ -410,7 +507,7 @@ const OrderGrid = () => {
                         title={columns.find(col => col.id === activeFilter)?.label}
                     />
                 )}
-            </div>
+            </Box>
         </LocalizationProvider>
     );
 };

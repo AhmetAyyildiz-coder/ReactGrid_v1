@@ -1,16 +1,16 @@
 import React from 'react';
 import { Button } from '@mui/material';
-import { Download } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 
-const ExportButton = ({ onExport }) => {
+const ExportButton = ({ onExport, text = "Excel'e Aktar" }) => {
     return (
         <Button
             variant="contained"
             color="primary"
-            startIcon={<Download className="w-4 h-4" />}
+            startIcon={<FileSpreadsheet className="w-4 h-4" />}
             onClick={onExport}
         >
-            CSV'ye Aktar
+            {text}
         </Button>
     );
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-import {createTheme, CssBaseline, ThemeProvider} from "@mui/material";
+import {createTheme, CssBaseline, ThemeProvider, Box} from "@mui/material";
 import CustomerGrid from "./components/CustomerGrid.jsx";
 import OrderGrid from './components/OrderGrid.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -16,15 +16,46 @@ function App() {
         palette: {
             mode: 'light', // Temayı light mode olarak ayarlar
         },
+        components: {
+            MuiContainer: {
+                styleOverrides: {
+                    root: {
+                        maxWidth: 'none !important',
+                        padding: '10px !important',
+                        margin: '0 !important'
+                    }
+                }
+            }
+        }
     });
 
   return (
     <>
+        <style>
+            {`
+                body {
+                    margin: 0;
+                    padding: 0;
+                    overflow-x: hidden;
+                }
+                #root {
+                    width: 100vw;
+                    margin: 0;
+                    padding: 0;
+                }
+            `}
+        </style>
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
             <ThemeProvider theme={theme}>
                 <CssBaseline />
-              <OrderGrid />
-
+                <Box sx={{ 
+                    width: '100vw',
+                    margin: 0,
+                    padding: 20,
+                    overflow: 'hidden'
+                }}>
+                    <OrderGrid />
+                </Box>
             </ThemeProvider>
         </LocalizationProvider>
     </>
