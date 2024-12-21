@@ -4,12 +4,12 @@ import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react';
 import { DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 
-const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, rowCount, onSelectAllClick, searchValues, onSearchChange, dateFilters, onDateFilterChange, sortConfig, onSort }) => {
+const TableHeader = ({ columns, selectedValues, handleFilterClick, numSelected, rowCount, onSelectAllClick, searchValues, onSearchChange, dateFilters, onDateFilterChange, sortConfig = { key: null, direction: null }, onSort = () => {} }) => {
     const isAllSelected = rowCount > 0 && numSelected === rowCount;
     const isIndeterminate = numSelected > 0 && numSelected < rowCount;
 
     const getSortIcon = (columnId) => {
-        if (sortConfig.key !== columnId) {
+        if (!sortConfig || sortConfig.key !== columnId) {
             return <ChevronsUpDown className="w-4 h-4 text-gray-400" />;
         }
         return sortConfig.direction === 'asc' 

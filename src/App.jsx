@@ -6,6 +6,7 @@ import OrderGrid from './components/OrderGrid.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import 'dayjs/locale/tr';
+import CustomerOrdersGrid from './components/CustomerOrdersGrid';
 
 
 
@@ -54,7 +55,7 @@ function App() {
                     padding: 20,
                     overflow: 'hidden'
                 }}>
-                    <OrderGrid />
+                    <CustomerOrdersGrid />
                 </Box>
             </ThemeProvider>
         </LocalizationProvider>
