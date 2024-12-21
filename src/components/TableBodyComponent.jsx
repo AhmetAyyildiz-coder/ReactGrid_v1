@@ -45,27 +45,27 @@ const TableBodyComponent = ({ columns, data, selectedRows, onRowClick, isSelecte
     return (
         <TableBody>
             {data.map((row) => {
-                const isItemSelected = isSelected(row.customerId);
+                const isItemSelected = isSelected(row.orderId);
 
                 return (
                     <TableRow
                         hover
-                        key={row.customerId}
+                        key={row.orderId}
                         selected={isItemSelected}
                     >
                         <TableCell padding="checkbox">
                             <Checkbox
                                 checked={isItemSelected}
-                                onChange={() => onRowClick(row.customerId)}
+                                onChange={() => onRowClick(row.orderId)}
                             />
                         </TableCell>
                         {columns.map((column) => (
                             <TableCell 
-                                key={column.id}
-                                onDoubleClick={() => handleDoubleClick(row.customerId, column.id, row[column.id])}
+                                key={`${row.orderId}_${column.id}`}
+                                onDoubleClick={() => handleDoubleClick(row.orderId, column.id, row[column.id])}
                                 sx={{ cursor: 'pointer' }}
                             >
-                                {isEditing(row.customerId, column.id) ? (
+                                {isEditing(row.orderId, column.id) ? (
                                     <TextField
                                         size="small"
                                         value={editValue}

@@ -91,7 +91,7 @@ const FilterPopover = ({
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder="Ara..."
+                    placeholder=""
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{

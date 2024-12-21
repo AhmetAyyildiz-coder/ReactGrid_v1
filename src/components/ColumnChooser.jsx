@@ -72,8 +72,8 @@ const ColumnChooser = ({ columns, visibleColumns, onColumnToggle }) => {
                     <List dense>
                         <ListItem
                             dense
-                            button
                             onClick={handleSelectAll}
+                            sx={{ cursor: 'pointer' }}
                         >
                             <ListItemIcon>
                                 <Checkbox
@@ -91,8 +91,8 @@ const ColumnChooser = ({ columns, visibleColumns, onColumnToggle }) => {
                             <ListItem
                                 key={column.id}
                                 dense
-                                button
                                 onClick={() => handleToggle(column.id)}
+                                sx={{ cursor: 'pointer' }}
                             >
                                 <ListItemIcon>
                                     <Checkbox
