@@ -8,6 +8,7 @@ Database olarak Nortwihnd database kullanılmaktadır. Microsoft SQL server exam
 * Multi Column Filter
 * DateTime Picker Filter
 
+Grid componentleri Solid'e uygun tasarlanmıştır. Reusable component olarak kullanılabilir.
 
 Master Grid 
 ![image](https://github.com/user-attachments/assets/1f12e1c0-4349-44a6-9568-25874cdb0fa4)
